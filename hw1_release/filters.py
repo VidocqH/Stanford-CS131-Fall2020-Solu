@@ -29,7 +29,18 @@ def conv_nested(image, kernel):
     out = np.zeros((Hi, Wi))
 
     ### YOUR CODE HERE
-    pass
+    dim_kernel = int(Hk / 2)
+    for i in range(Hi):
+        for j in range(Wi):
+            tem = 0
+            for ki in range(Hk):
+                for kj in range(Wk):
+                    if i+dim_kernel-ki<0 or j+dim_kernel-kj<0 or i+dim_kernel-ki>=Hi or j+dim_kernel-kj>=Wi:
+                        # Ghost cell handler, for now, I handle it as 0, but can handle it as the nearest element.
+                        continue
+                    else:
+                        tem += image[i+dim_kernel-ki, j+dim_kernel-kj] * kernel[ki, kj]
+            out[i, j] = tem
     ### END YOUR CODE
 
     return out
@@ -56,7 +67,8 @@ def zero_pad(image, pad_height, pad_width):
     out = None
 
     ### YOUR CODE HERE
-    pass
+    out = np.zeros((H+2*pad_height, W+2*pad_width))
+    out[pad_height:H+pad_height, pad_width:W+pad_width] = image[:, :]
     ### END YOUR CODE
     return out
 
@@ -85,7 +97,12 @@ def conv_fast(image, kernel):
     out = np.zeros((Hi, Wi))
 
     ### YOUR CODE HERE
-    pass
+    pad_image = zero_pad(image, int(Hk/2), int(Wk/2))
+    kernel = np.flip(kernel, axis=0)
+    kernel = np.flip(kernel, axis=1)
+    for i in range(Hi):
+        for j in range(Wi):
+            out[i, j] = np.sum(kernel * pad_image[i:i+Hk, j:j+Wk])
     ### END YOUR CODE
 
     return out
@@ -105,7 +122,9 @@ def cross_correlation(f, g):
 
     out = None
     ### YOUR CODE HERE
-    pass
+    g = np.flip(g, axis=0)
+    g = np.flip(g, axis=1)
+    out = conv_fast(f, g)
     ### END YOUR CODE
 
     return out
@@ -127,7 +146,10 @@ def zero_mean_cross_correlation(f, g):
 
     out = None
     ### YOUR CODE HERE
-    pass
+    g = np.flip(g, axis=0)
+    g = np.flip(g, axis=1)
+    g -= np.mean(g)
+    out = conv_fast(f, g)
     ### END YOUR CODE
 
     return out
@@ -151,7 +173,19 @@ def normalized_cross_correlation(f, g):
 
     out = None
     ### YOUR CODE HERE
-    pass
+    g = (g - np.mean(g)) / np.std(g)
+
+    Hi, Wi = f.shape
+    Hk, Wk = g.shape
+    out = np.zeros((Hi, Wi))
+    pad_f = zero_pad(f, int(Hk/2), int(Wk/2))
+
+    for i in range(Hi):
+        for j in range(Wi):
+            sub_f = pad_f[i:i+Hk, j:j+Wk]
+            sub_f_mean = np.mean(sub_f)
+            sub_f_std = np.std(sub_f)
+            out[i, j] = np.sum(g * (sub_f - sub_f_mean)/sub_f_std)
     ### END YOUR CODE
 
     return out
