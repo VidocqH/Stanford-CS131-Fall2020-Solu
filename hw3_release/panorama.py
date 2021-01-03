@@ -53,7 +53,19 @@ def harris_corners(img, window_size=3, k=0.04):
     dy = filters.sobel_h(img)
 
     ### YOUR CODE HERE
-    pass
+    # 2. Compute products of derivatives ( I_x^2, I_y^2, I_xy ) at each pixel
+    I_x2 = convolve(dx ** 2, window, mode='constant', cval=0)
+    I_y2 = convolve(dy ** 2, window, mode='constant', cval=0)
+    I_xy = convolve(dx * dy, window, mode='constant', cval=0)
+    # 3. Compute matrix M at each pixel
+    for i in range(H):
+        for j in range(W):
+            M = np.array([
+                [I_x2[i, j], I_xy[i, j]],
+                [I_xy[i, j], I_y2[i, j]]
+            ])
+            # 4. Compute corner response at each pixel
+            response[i, j] = np.linalg.det(M) - k * (np.trace(M) ** 2)
     ### END YOUR CODE
 
     return response
@@ -79,7 +91,12 @@ def simple_descriptor(patch):
     """
     feature = []
     ### YOUR CODE HERE
-    pass
+    patch_std = np.std(patch)
+    patch_mean = np.mean(patch)
+    if patch_std == 0:
+        patch_std = 1
+    feature = (patch - patch_mean) / patch_std
+    feature = feature.reshape(-1)
     ### END YOUR CODE
     return feature
 
@@ -134,7 +151,13 @@ def match_descriptors(desc1, desc2, threshold=0.5):
     dists = cdist(desc1, desc2)
 
     ### YOUR CODE HERE
-    pass
+    for i in range(M):
+        sortRow = np.sort(dists[i, :])
+        rat = sortRow[0] / sortRow[1]
+        if rat < threshold:
+            minIdx = np.argmin(dists[i, :])
+            matches.append([ i, minIdx ])
+    matches = np.array(matches).reshape(-1, 2)
     ### END YOUR CODE
 
     return matches
@@ -167,7 +190,8 @@ def fit_affine_matrix(p1, p2):
     p2 = pad(p2)
 
     ### YOUR CODE HERE
-    pass
+    # m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+    H = np.linalg.lstsq(p2, p1, rcond=None)[0]
     ### END YOUR CODE
 
     # Sometimes numerical issues cause least-squares to produce the last
@@ -238,7 +262,24 @@ def ransac(keypoints1, keypoints2, matches, n_iters=200, threshold=20):
     '''
 
     ### YOUR CODE HERE
-    pass
+    for i in range(n_iters):
+        # 1. Select random set of matches
+        idx = np.random.choice(N, n_samples, replace=False)
+        set1 = matched1[idx, :]
+        set2 = matched2[idx, :]
+        # 2. Compute affine transformation matrix
+        H = np.linalg.lstsq(set2, set1, rcond=None)[0]
+        H[:,2] = np.array([0, 0, 1])
+        # 3. Compute inliers via Euclidean distance
+        inliers = np.linalg.norm(matched2.dot(H) - matched1, axis=1) ** 2 < threshold
+        # 4. Keep the largest set of inliers
+        sum_inliers = np.sum(inliers)
+        if sum_inliers > n_inliers:
+            max_inliers = inliers.copy()
+            n_inliers = sum_inliers
+    # 5. Re-compute least-squares estimate on all of the inliers
+    H = np.linalg.lstsq(matched2[max_inliers], matched1[max_inliers], rcond=None)[0]
+    H[:,2] = np.array([0, 0, 1])
     ### END YOUR CODE
     return H, orig_matches[max_inliers]
 
@@ -289,7 +330,19 @@ def hog_descriptor(patch, pixels_per_cell=(8,8)):
 
     # Compute histogram per cell
     ### YOUR CODE HERE
-    pass
+    # 2. Compute gradient histograms for each cell
+    for i in range(rows):
+        for j in range(cols):
+            for ci in range(pixels_per_cell[0]):
+                for cj in range(pixels_per_cell[1]):
+                    bin_idx = int(theta_cells[i, j][ci, cj] / degrees_per_bin)
+                    bin_idx = 8 if bin_idx == 9 else bin_idx
+                    cells[i, j, bin_idx] += G_cells[i, j][ci, cj]
+    # 3. Flatten block of histograms into a 1D feature vector
+    block = cells.flatten()
+    # 4. Normalize flattened block by L2 norm
+    for i in range(0, len(block), n_bins):
+        block[i:i+n_bins] = block[i:i+n_bins] / np.linalg.norm(block[i:i+n_bins])
     ### YOUR CODE HERE
 
     return block
