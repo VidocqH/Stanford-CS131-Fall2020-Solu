@@ -96,7 +96,7 @@ def simple_descriptor(patch):
     if patch_std == 0:
         patch_std = 1
     feature = (patch - patch_mean) / patch_std
-    feature = feature.reshape(-1)
+    feature = feature.flatten()
     ### END YOUR CODE
     return feature
 
