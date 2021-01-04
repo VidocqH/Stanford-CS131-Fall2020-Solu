@@ -45,7 +45,17 @@ def kmeans(features, k, num_iters=100):
 
     for n in range(num_iters):
         ### YOUR CODE HERE
-        pass
+        compare_assignments = assignments.copy()
+        # 2. Assign each point to the closest center
+        for i in range(N):
+            assignments[i] = np.argmin(np.sum((features[i] - centers) ** 2, axis=1))
+        # 3. Compute new center of each cluster
+        for i in range(k):
+            centers[i] = np.mean(features[assignments == i])
+        # 4. Stop if cluster assignments did not change
+        if (compare_assignments == assignments).all():
+            break
+        # 5. Go to step 2
         ### END YOUR CODE
 
     return assignments
@@ -81,7 +91,16 @@ def kmeans_fast(features, k, num_iters=100):
 
     for n in range(num_iters):
         ### YOUR CODE HERE
-        pass
+        compare_assignments = assignments.copy()
+        # 2. Assign each point to the closest center
+        assignments = np.argmin(cdist(features, centers), axis=1)
+        # 3. Compute new center of each cluster
+        for i in range(k):
+            centers[i] = np.mean(features[assignments == i])
+        # 4. Stop if cluster assignments did not change
+        if (compare_assignments == assignments).all():
+            break
+        # 5. Go to step 2
         ### END YOUR CODE
 
     return assignments
@@ -136,7 +155,26 @@ def hierarchical_clustering(features, k):
 
     while n_clusters > k:
         ### YOUR CODE HERE
-        pass
+        # https://www.analyticsvidhya.com/blog/2019/05/beginners-guide-hierarchical-clustering/
+        # Compute the distance between all pairs of clusters
+        dist = pdist(centers)
+        dist = squareform(dist) # distance symmetric matrix
+        for i in range(dist.shape[0]):
+            dist[i, i] = 999999999
+        # Merge the pair of clusters that are closest to each other
+        idx = np.argmin(dist)
+        # Since it's a symmetric matrix, the row and the col can be exchange
+        row = int(idx / n_clusters)
+        col = idx - row * n_clusters
+        for i in range(N):
+            if assignments[i] == col:
+                assignments[i] = row
+        for i in range(N):
+            if assignments[i] > col:
+                assignments[i] -= 1
+        centers = np.delete(centers, col, axis=0)
+        centers[row] = np.mean(features[assignments == row], axis=0)
+        n_clusters -= 1
         ### END YOUR CODE
 
     return assignments
@@ -157,7 +195,9 @@ def color_features(img):
     features = np.zeros((H*W, C))
 
     ### YOUR CODE HERE
-    pass
+    for i in range(H):
+        for j in range(W):
+            features[i*W+j] = img[i, j]
     ### END YOUR CODE
 
     return features
@@ -186,7 +226,11 @@ def color_position_features(img):
     features = np.zeros((H*W, C+2))
 
     ### YOUR CODE HERE
-    pass
+    for i in range(H):
+        for j in range(W):
+            rgb = color[i, j]
+            features[i*W+j] = np.array([rgb[0], rgb[1], rgb[2], i, j])
+    features = (features - np.mean(features, axis=0)) / np.std(features, axis=0)
     ### END YOUR CODE
 
     return features
@@ -226,7 +270,7 @@ def compute_accuracy(mask_gt, mask):
 
     accuracy = None
     ### YOUR CODE HERE
-    pass
+    accuracy = np.count_nonzero(mask_gt == mask) / (len(mask_gt) * 100)
     ### END YOUR CODE
 
     return accuracy
