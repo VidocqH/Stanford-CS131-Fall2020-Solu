@@ -26,8 +26,10 @@ def compute_distances(X1, X2):
     # in particular you should not use functions from scipy.
     #
     # HINT: Try to formulate the l2 distance using matrix multiplication
-
-    pass
+    X1_square = np.sum(X1 ** 2, axis=1)
+    X2_square = np.sum(X2 ** 2, axis=1)
+    # (x-y)^2 == x^2 + y^2 -2xy
+    dists = np.sqrt(X1_square.reshape(-1, 1) + X2_square - 2 * X1.dot(X2.T))
     # END YOUR CODE
 
     assert dists.shape == (M, N), "dists should have shape (M, N), got %s" % dists.shape
@@ -62,7 +64,13 @@ def predict_labels(dists, y_train, k=1):
     # Hint: Look up the functions numpy.argsort and numpy.bincount
 
     # YOUR CODE HERE
-    pass
+    for i in range(num_test):
+        # Find the k nearest neighbors of the ith testing point
+        knn = np.argsort(dists[i])[0:k]
+        # Find the labels of neighbors
+        closest_y = y_train[knn[:]]
+        idxArr = np.bincount(closest_y)
+        y_pred[i] = np.argmax(idxArr)
     # END YOUR CODE
 
     return y_pred
@@ -112,7 +120,14 @@ def split_folds(X_train, y_train, num_folds):
 
     # YOUR CODE HERE
     # Hint: You can use the numpy array_split function.
-    pass
+    X_lst = np.array_split(X_train, num_folds, axis=0)
+    y_train = y_train.reshape(-1, 1)
+    y_lst = np.array_split(y_train, num_folds, axis=0)
+    for i in range(num_folds):
+        X_vals[i, :, :] = X_lst[i]
+        X_trains[i, :, :] = np.vstack(X_lst[:i] + X_lst[i+1:])
+        y_vals[i, :] = y_lst[i][:, 0]
+        y_trains[i, :] = np.vstack(y_lst[:i] + y_lst[i+1:])[:, 0]
     # END YOUR CODE
 
     return X_trains, y_trains, X_vals, y_vals
