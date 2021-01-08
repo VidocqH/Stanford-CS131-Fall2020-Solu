@@ -20,7 +20,7 @@ def camera_from_world_transform(d: float = 1.0) -> np.ndarray:
     """
     T = np.eye(4)
     # YOUR CODE HERE
-    pass
+    R_M = np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]])
     # END YOUR CODE
     assert T.shape == (4, 4)
     return T
